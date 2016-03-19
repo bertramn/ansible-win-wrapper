@@ -65,16 +65,22 @@ Simply copy the `ansible-win-wrapper.exe` into the same folder of the `vagrant.e
 ```cmd
 copy ansible-win-wrapper C:\HashiCorp\Vagrant\bin\ansible-playbook.exe
 
-vagrant --version
+c:\> vagrant --version
 Vagrant 1.8.1
 
-ansible-playbook --version
+c:\> ansible-playbook --version
 ansible-playbook 2.0.0.2
   config file =
   configured module search path = Default w/o overrides
 ```
 
 Et voilà, ansible-playbook should now work from vagrant.
+
+Probably wise installing 2 most commonly used plugins. To isntall vagrant plugins always execute this from the dos command shell never from cygwin. Make sure the Windows command shell `PATH` variable contains the `c:\HashiCorp\Vagrant\bin` path.
+
+c:\> vagrant plugin install vagrant-vbguest
+
+c:\> vagrant plugin install vagrant-hostmanager
 
 ### Test Example
 
