@@ -11,17 +11,22 @@ We assume you have installed a working cygwin shell on your workstation.
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
 * python
 * python-setuptools
-* gcc-g++
-* wget
+* libcrypt-devel (optional)
+* gmp (optional)
+* libgmp-devel (optional)
+* gcc-core
+* make (optional)
 * openssh
 * curl
+* wget
 * git
+* nano (optional)
 
-Now you should have base python environment installed in your cygwin environment.
+Now you should have a basic cygwin python environment that can be used to install ansible in.
 
 ##### Configure Python Environment
 
-First lets open up a cygwin terminal and install pip.
+First lets open up a cygwin terminal and install `pip`
 
 ```sh
 $ easy_install-2.7 pip
@@ -32,26 +37,25 @@ Thereafter we will update `pip` and `setuptools`
 ```sh
 $ pip install -U pip setuptools
 ```
-
 ##### Install Ansible
 
-Still in the cygwin terminal we need to install the ansible dependencies.
+Ansible vault has some issue when installing pycrypto via pip but works when pycrypto is installed using the easy installer, so we just install pycrypto using `easy_install` before ansible
 
 ```sh
-$ pip install -U crypto paramiko PyYAML Jinja2 httplib2 six
+$ easy_install-2.7 pycrypto
 ```
 
-And finally lets install ansible itself.
+Still in the cygwin terminal lets install ansible and its dependencies.
 
 ```sh
-$ pip install -U ansible
+$ pip install -U crypto paramiko PyYAML Jinja2 httplib2 six ansible
 ```
 
 Quick test to ensure it works.
 
 ```sh
 $ ansible --version
-ansible 2.0.0.2
+ansible 2.0.1.0
   config file =
   configured module search path = Default w/o overrides
 ```
@@ -69,14 +73,16 @@ c:\> vagrant --version
 Vagrant 1.8.1
 
 c:\> ansible-playbook --version
-ansible-playbook 2.0.0.2
+ansible-playbook 2.0.1.0
   config file =
   configured module search path = Default w/o overrides
 ```
 
 Et voilà, ansible-playbook should now work from vagrant.
 
-Probably wise installing 2 most commonly used plugins. To isntall vagrant plugins always execute this from the dos command shell never from cygwin. Make sure the Windows command shell `PATH` variable contains the `c:\HashiCorp\Vagrant\bin` path.
+Make sure that when you install vagrant plugins to use the command line shell else the ruby gems from your Cygwin environment and from the vagrant embedded msys environment get all mixed up. Check that your Windows command shell `PATH` variable contains the `c:\HashiCorp\Vagrant\bin` path for vagrant to work correctly.
+
+Below an example of how to install 2 of the most commonly used plugins.
 
 c:\> vagrant plugin install vagrant-vbguest
 
