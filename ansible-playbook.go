@@ -36,17 +36,31 @@ func main() {
 	}
 	cmd := exec.Command("c:\\cygwin\\bin\\bash.exe", "-c", strings.Join(args[:], " "))
 
+	// echo stdin back to console
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error creating "+executable+" wrapper stdout pipeline", err)
 		os.Exit(1)
 	}
 
-	// echo stdin back to console
-	scanner := bufio.NewScanner(cmdReader)
+	outScanner := bufio.NewScanner(cmdReader)
 	go func() {
-		for scanner.Scan() {
-			fmt.Printf("%s\n", scanner.Text())
+		for outScanner.Scan() {
+			fmt.Printf("%s\n", outScanner.Text())
+		}
+	}()
+
+	// echo stderr back to console
+	errReader, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error creating "+executable+" wrapper stderr pipeline", err)
+		os.Exit(1)
+	}
+
+	errScanner := bufio.NewScanner(errReader)
+	go func() {
+		for errScanner.Scan() {
+			fmt.Fprintln(os.Stderr, errScanner.Text())
 		}
 	}()
 
