@@ -102,9 +102,29 @@ Make sure that when you install vagrant plugins to use the command line shell el
 
 Below an example of how to install 2 of the most commonly used plugins.
 
+```cmd
 c:\> vagrant plugin install vagrant-vbguest
 
 c:\> vagrant plugin install vagrant-hostmanager
+```
+
+#### Some Advanced Hack
+
+This one is not to be missed, Vagrant ( =< 1.8.1) does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
+
+What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.1/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
+
+```rb
+def extra_vars_argument
+  if config.extra_vars.kind_of?(String) and config.extra_vars =~ /^@.+$/
+    # A JSON or YAML file is referenced.
+    config.extra_vars
+  else
+    # Expected to be a Hash after config validation.
+    "'#{config.extra_vars.to_json.gsub("\"", %q(\\\"))}'" # <<<<< hack line
+  end
+end
+```
 
 ### Test Example
 
