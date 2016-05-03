@@ -11,11 +11,14 @@ We assume you have installed a working cygwin shell on your workstation.
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
 * python
 * python-setuptools
-* libcrypt-devel (optional)
+* libffi-dev
+* openssl
+* openssl-devel
+* libcrypt-devel
 * gmp (optional)
 * libgmp-devel (optional)
 * gcc-core
-* make (optional)
+* make
 * openssh
 * curl
 * wget
@@ -39,10 +42,25 @@ $ pip install -U pip setuptools
 ```
 ##### Install Ansible
 
-Ansible vault has some issue when installing pycrypto via pip, best to install pycrypto prebuild module with the pyton easy_install tool from [here](http://www.voidspace.org.uk/python/modules.shtml#pycrypto).
+Installing pycrypto is a bit of a drag as Ansible needs 2.6.1 and cygwin only comes with a precompiled 2.6 package. One can either install pycrypto via pip using below compiler flag:
 
 ```sh
-easy_install http://www.voidspace.org.uk/downloads/pycrypto26/pycrypto-2.6.win-amd64-py2.7.exe
+CFLAGS="-g -O2 -D_BSD_SOURCE" pip install -U pycrypto
+```
+
+or just compile it from sources:
+
+```sh
+mkdir -p ~/workspaces/python && cd ~/workspaces/python
+# download and unpack pycrypto 2.6.1 sources
+curl https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.tar.gz | tar xzvf -
+
+# compile disabling BSD source
+cd pycrypto-2.6.1
+CFLAGS="-g -O2 -D_BSD_SOURCE" python setup.py build build_ext -DMS_WIN64
+
+# install module
+python setup.py install
 ```
 
 Still in the cygwin terminal lets install ansible and its dependencies.
@@ -55,7 +73,7 @@ Quick test to ensure it works.
 
 ```sh
 $ ansible --version
-ansible 2.0.1.0
+ansible 2.0.2.0
   config file =
   configured module search path = Default w/o overrides
 ```
