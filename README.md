@@ -158,7 +158,7 @@ Vagrant.configure(2) do |config|
 end
 ```
 
-**`ansible.cnf`**
+**`ansible.cfg`**
 
 Ansible default configuration with some Windows specific config.
 
@@ -166,7 +166,8 @@ Ansible default configuration with some Windows specific config.
 [defaults]
 host_key_ckecking = False
 [ssh_connection]
-# ControlMaster on cygwin OpenSSH does not work, so disable it
+# ControlMaster on cygwin OpenSSH does not work, must disable it
+# otherwise ansible will not be able to connect to the target host
 control_path = none
 ```
 
