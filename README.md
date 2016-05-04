@@ -9,6 +9,8 @@ We assume you have installed a working cygwin shell on your workstation.
 ##### Install Cygwin Packages
 
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
+* binutils
+* libuuid-devel
 * python
 * python-setuptools
 * libffi-dev
