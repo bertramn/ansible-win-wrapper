@@ -6,6 +6,25 @@ We assume you have installed a working cygwin shell on your workstation.
 
 ### Installation
 
+##### Cygwin Configuration
+
+The wrapper must be able to find the installed cygwin environment. By default it assumes the cygwin home is `c:\cygwin`. If your cygwin is installed in a different location there are 2 options available to tell the wrapper where to find the cygwin environment.
+
+1. Using the `CYGWIN_HOME` Environment Variable
+
+```sh
+export CYGWIN_HOME=c:\\cygwin64
+```
+
+2. Using the `cygwin.ini` File
+
+The wrapper will look into the directory of the wrapper executable for a `cygwin.ini` file that contains the below ini information.
+
+```ini
+[cygwin]
+home=c:\cygwin64
+```
+
 ##### Install Cygwin Packages
 
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
