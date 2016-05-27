@@ -28,13 +28,18 @@ home=c:\cygwin64
 ##### Install Cygwin Packages
 
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
+* binutils
+* libuuid-devel
 * python
 * python-setuptools
-* libcrypt-devel (optional)
+* libffi-dev
+* openssl
+* openssl-devel
+* libcrypt-devel
 * gmp (optional)
 * libgmp-devel (optional)
 * gcc-core
-* make (optional)
+* make
 * openssh
 * curl
 * wget
@@ -58,10 +63,25 @@ $ pip install -U pip setuptools
 ```
 ##### Install Ansible
 
-Ansible vault has some issue when installing pycrypto via pip but works when pycrypto is installed using the easy installer, so we just install pycrypto using `easy_install` before ansible
+Installing pycrypto is a bit of a drag as Ansible needs 2.6.1 and cygwin only comes with a precompiled 2.6 package. One can either install pycrypto via pip using below compiler flag:
 
 ```sh
-$ easy_install-2.7 pycrypto
+CFLAGS="-g -O2 -D_BSD_SOURCE" pip install -U pycrypto
+```
+
+or just compile it from sources:
+
+```sh
+mkdir -p ~/workspaces/python && cd ~/workspaces/python
+# download and unpack pycrypto 2.6.1 sources
+curl https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.tar.gz | tar xzvf -
+
+# compile disabling BSD source
+cd pycrypto-2.6.1
+CFLAGS="-g -O2 -D_BSD_SOURCE" python setup.py build build_ext -DMS_WIN64
+
+# install module
+python setup.py install
 ```
 
 Still in the cygwin terminal lets install ansible and its dependencies.
@@ -74,7 +94,7 @@ Quick test to ensure it works.
 
 ```sh
 $ ansible --version
-ansible 2.0.1.0
+ansible 2.0.2.0
   config file =
   configured module search path = Default w/o overrides
 ```
@@ -103,9 +123,29 @@ Make sure that when you install vagrant plugins to use the command line shell el
 
 Below an example of how to install 2 of the most commonly used plugins.
 
+```cmd
 c:\> vagrant plugin install vagrant-vbguest
 
 c:\> vagrant plugin install vagrant-hostmanager
+```
+
+#### Some Advanced Hack
+
+This one is not to be missed, Vagrant ( =< 1.8.1) does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
+
+What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.1/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
+
+```rb
+def extra_vars_argument
+  if config.extra_vars.kind_of?(String) and config.extra_vars =~ /^@.+$/
+    # A JSON or YAML file is referenced.
+    config.extra_vars
+  else
+    # Expected to be a Hash after config validation.
+    "'#{config.extra_vars.to_json.gsub("\"", %q(\\\"))}'" # <<<<< hack line
+  end
+end
+```
 
 ### Test Example
 
@@ -139,7 +179,7 @@ Vagrant.configure(2) do |config|
 end
 ```
 
-**`ansible.cnf`**
+**`ansible.cfg`**
 
 Ansible default configuration with some Windows specific config.
 
@@ -147,7 +187,8 @@ Ansible default configuration with some Windows specific config.
 [defaults]
 host_key_ckecking = False
 [ssh_connection]
-# ControlMaster on cygwin OpenSSH does not work, so disable it
+# ControlMaster on cygwin OpenSSH does not work, must disable it
+# otherwise ansible will not be able to connect to the target host
 control_path = none
 ```
 
