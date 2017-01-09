@@ -29,29 +29,31 @@ home=c:\cygwin64
 
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
 * binutils
-* libuuid-devel
-* python
-* python-setuptools
-* python-devel
-* python-cffi
-* libffi-dev
 * openssl
 * openssl-devel
+* gcc-core
+* make
+* python
+* python-setuptools
+* libtool
+* libuuid-devel
+* libffi-dev
 * libcrypt-devel
 * gmp (optional)
 * libgmp-devel (optional)
-* gcc-core
-* make
+* libmysqlclient-devel (optional)
+* python-devel
+* python-cffi
+* python-crypto
 * openssh
-* curl
-* wget
-* git
+* curl (optional)
+* wget (optional)
 * nano (optional)
 
 Simply run the cygwin installer as followed:
 
 ```sh
-setup-x86_64.exe --no-admin -q -P binutils,libtool,libuuid-devel,python,python-setuptools,python-devel,python-cffi,libffi-dev,openssl,openssl-devel,libcrypt-devel,gmp,libgmp-devel,gcc-core,make,openssh,curl,wget,nano,libmysqlclient-devel
+setup-x86_64.exe --no-admin -q -P binutils,openssl,openssl-devel,gcc-core,make,python,python-setuptools,libtool,libuuid-devel,libffi-dev,libcrypt-devel,gmp,libgmp-devel,libmysqlclient-devel,python-devel,python-cffi,python-crypto,openssh,curl,wget,nano
 ```
 
 Now you should have a basic cygwin python environment that can be used to install ansible in.
