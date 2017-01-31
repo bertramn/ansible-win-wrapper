@@ -142,7 +142,20 @@ c:\> vagrant plugin install vagrant-hostmanager
 
 #### Some Advanced Hack
 
-This one is not to be missed, Vagrant ( =< 1.8.1) does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
+This one is not to be missed, Vagrant does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
+
+Basically when providing any additional playbook parameters as a hash in Vagrant using the `extra_args` configuration option, this data is not sent in the right format to the ansible playbook.
+
+```rb
+ansible.extra_vars = {
+  my_special_param: Array.new(2){ |n| "#{(1 + n).to_s.rjust(2,'0')}" }
+}
+```
+
+Expected: `--extra-vars="'{\"my_special_param\":[\"01\",\"02\"]}'"`
+
+Actual: `--extra-vars="{\"my_special_param\":[\"01\",\"02\"]}"`
+
 
 What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.1/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
 
@@ -157,7 +170,6 @@ def extra_vars_argument
   end
 end
 ```
-
 ### Test Example
 
 Setup a Vagrant project folder with a few basic files. I use cygwin terminal for simplicity but you can also do all of this in windows command or powershell.
