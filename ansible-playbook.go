@@ -15,19 +15,48 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/vaughan0/go-ini"
+	"log"
 	"os"
 	"os/exec"
-	"strings"
 	"path/filepath"
+	"reflect"
+	"strings"
+
+	"github.com/vaughan0/go-ini"
 )
 
 func main() {
 
 	var wrapperExecutableName = filepath.Base(os.Args[0])
-	var wrapperExecutableDir = filepath.Dir(os.Args[0])
 	var extension = filepath.Ext(wrapperExecutableName)
-	var executable = wrapperExecutableName[0 : len(wrapperExecutableName) - len(extension)]
+	var executable = wrapperExecutableName[0 : len(wrapperExecutableName)-len(extension)]
+
+	f, err := os.OpenFile(executable+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error creating "+executable+" log file", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+
+	log.Println("*******************************************************")
+
+	log.Printf("Target executable: %s\n", executable)
+	wrapperExecutableDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error getting path from "+os.Args[0], err)
+		os.Exit(1)
+	}
+	log.Printf("Wrapper dir: %s\n", wrapperExecutableDir)
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error getting current working folder", err)
+		os.Exit(1)
+	}
+	log.Printf("Current dir: %s\n", pwd)
+
 	// default cygwin home
 	var cygHome = "c:/cygwin"
 	// now check if we need to override the path with env variable
@@ -45,22 +74,37 @@ func main() {
 			}
 		}
 	}
+	log.Printf("Cygwin Home: %s\n", cygHome)
 
-	args := make([]string, len(os.Args[1:]) + 1, len(os.Args[1:]) + 1)
-	args[0] = "/usr/bin/" + executable
+	// // environment variables
+	// log.Println("Environment variables:")
+	// for i, e := range os.Environ() {
+	// 	pair := strings.Split(e, "=")
+	// 	log.Printf(" > %d: %s=%s\n", i, pair[0], pair[1])
+	// }
+
+	// args provided
+	log.Println("System args:")
+	args := make([]string, len(os.Args[1:])+1, len(os.Args[1:])+1)
+	args[0] = "/bin/" + executable
 	for i, a := range os.Args[1:] {
-		// fmt.Printf("arg[%d] is: %s\n", i+1, a)
-		args[i + 1] = a
+		log.Printf(" > %d: [%-10s] %s\n", i, reflect.TypeOf(a), a)
+		if strings.HasPrefix(a, "--extra-vars={") {
+			var sarg = strings.Split(a, "=")
+			args[i+1] = fmt.Sprintf("%s=%s", sarg[0], sarg[1])
+			log.Printf("extra vars set to: %s", args[i+1])
+		} else {
+			args[i+1] = a
+		}
 	}
 
-	var bashCmd = filepath.ToSlash(cygHome + "/bin/bash.exe")
-	//fmt.Println("execute: " + bashCmd)
-	cmd := exec.Command(bashCmd, "-c", strings.Join(args[:], " "))
-
+	var bashCmd = filepath.ToSlash(cygHome + "/bin/python2.7.exe")
+	log.Printf("execute\n  %s %s", bashCmd, strings.Join(args[:], " "))
+	cmd := exec.Command(bashCmd, args...)
 	// echo stdin back to console
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating " + executable + " wrapper stdout pipeline", err)
+		fmt.Fprintln(os.Stderr, "Error creating "+executable+" wrapper stdout pipeline", err)
 		os.Exit(1)
 	}
 
@@ -74,7 +118,7 @@ func main() {
 	// echo stderr back to console
 	errReader, err := cmd.StderrPipe()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating " + executable + " wrapper stderr pipeline", err)
+		fmt.Fprintln(os.Stderr, "Error creating "+executable+" wrapper stderr pipeline", err)
 		os.Exit(1)
 	}
 
@@ -87,13 +131,13 @@ func main() {
 
 	err = cmd.Start()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error starting " + executable + " wrapper", err)
+		fmt.Fprintln(os.Stderr, "Error starting "+executable+" wrapper", err)
 		os.Exit(1)
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error waiting for " + executable + " wrapper to finish", err)
+		fmt.Fprintln(os.Stderr, "Error waiting for "+executable+" wrapper to finish", err)
 		os.Exit(1)
 	}
 

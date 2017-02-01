@@ -140,7 +140,7 @@ c:\> vagrant plugin install vagrant-vbguest
 c:\> vagrant plugin install vagrant-hostmanager
 ```
 
-#### Some Advanced Hack
+#### Fix Vagrant Ansible Provisioner Bug
 
 This one is not to be missed, Vagrant does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
 
@@ -152,24 +152,35 @@ ansible.extra_vars = {
 }
 ```
 
-Expected: `--extra-vars="'{\"my_special_param\":[\"01\",\"02\"]}'"`
+Expected:
 
-Actual: `--extra-vars="{\"my_special_param\":[\"01\",\"02\"]}"`
+`--extra-vars={ \"my_special_param\":[\"01\",\"02\"] }`
+
+Actual:
+
+`--extra-vars={my_special_param:[01,02]}`
+
+This problem is caused by the way the JSON is generated for a ruby hash.
+
+The first problem is that the generated json does not escape the double quotes which will get lost in the Subprocess call out.
+
+The other problem is that `ansible-playbook` is very picky in the way it receives and parses the json in the `--extra-vars` argument. In particular it expects a space after the opening bracket `{` and a space before the closig bracket `}`.
 
 
-What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.1/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
+What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
 
 ```rb
 def extra_vars_argument
-  if config.extra_vars.kind_of?(String) and config.extra_vars =~ /^@.+$/
+  if has_an_extra_vars_file_argument
     # A JSON or YAML file is referenced.
     config.extra_vars
   else
     # Expected to be a Hash after config validation.
-    "'#{config.extra_vars.to_json.gsub("\"", %q(\\\"))}'" # <<<<< hack line
+    config.extra_vars.to_json.gsub('{', '{ ').gsub('}', ' }').gsub('"', '\\\"') # << the hacked line fixes space of the curlies and escapes the double quotes
   end
 end
 ```
+
 ### Test Example
 
 Setup a Vagrant project folder with a few basic files. I use cygwin terminal for simplicity but you can also do all of this in windows command or powershell.
