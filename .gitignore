@@ -22,6 +22,8 @@ _testmain.go
 *.exe
 *.test
 *.prof
-/.project
+.project/
 .idea/
 *.iml
+.vscode/
+*.log

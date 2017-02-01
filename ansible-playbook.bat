@@ -1,5 +1,7 @@
 @echo off
 
+setlocal DisableDelayedExpansion
+
 REM If you used the stand Cygwin installer this will be C:\cygwin
 rem set CYGWIN=%USERPROFILE%\.babun\cygwin
 set CYGWIN=c:\cygwin
@@ -8,15 +10,15 @@ rem set CYGWIN=c:\dev\apps\babun\.babun\cygwin
 
 REM You can switch this to work with bash with %CYGWIN%\bin\bash.exe
 rem set SH=%CYGWIN%\bin\zsh.exe
-set SH=%CYGWIN%\bin\bash.exe
+set SH=%CYGWIN%\bin\python2.7.exe
 
 rem cygwin
-set EXEC_ANSIBLE_PLAYBOOK=/usr/bin/ansible-playbook
+set EXEC_ANSIBLE_PLAYBOOK=/bin/ansible-playbook
 rem babun
 rem set EXEC_ANSIBLE_PLAYBOOK=/bin/ansible-playbook
 
 echo "----------------------------- " > c:\temp\vansible.log
-setlocal enabledelayedexpansion
+setlocal EnableDelayedExpansion
 REM
 REM set argCount=0
 REM for %%x in (%*) do (
@@ -48,6 +50,6 @@ REM :doneSetArgs
 REM echo "CMD: %CMD_LINE_ARGS%"
 
 REM "%SH%" -c "%EXEC_ANSIBLE_PLAYBOOK% -vvvv %CMD_LINE_ARGS%"
-"%SH%" -c "%EXEC_ANSIBLE_PLAYBOOK% %*"
+"%SH%" %EXEC_ANSIBLE_PLAYBOOK% %*
 
 rem c:\dev\apps\python\python-2.7.10\python.exe  C:\dev\apps\babun\.babun\cygwin\bin\ansible-playbook
