@@ -154,7 +154,7 @@ ansible.extra_vars = {
 
 Expected:
 
-`--extra-vars={ \"my_special_param\":[\"01\",\"02\"] }`
+`--extra-vars='{ \"my_special_param\":[\"01\",\"02\"] }'`
 
 Actual:
 
@@ -178,6 +178,21 @@ def extra_vars_argument
     # Expected to be a Hash after config validation.
     config.extra_vars.to_json.gsub('{', '{ ').gsub('}', ' }').gsub('"', '\\\"') # << the hacked line fixes space of the curlies and escapes the double quotes
   end
+end
+```
+
+While we are at it, Vagrant has hardcoded some SSH args to be added to the ansible playbook shell commands that will override `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=none` shell ssh parameter.
+
+As of 2017 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). So to ensure this is disabled properly, set line 277 to `ControlMaster=none` and disable the following line.
+
+`$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/host.rb`
+```rb
+# which are lost when ANSIBLE_SSH_ARGS is defined.
+unless ssh_options.empty?
+  ssh_options << "-o ControlMaster=none"
+  # DISABLE ssh_options << "-o ControlPersist=60s"
+  # Intentionally keep ControlPath undefined to let ansible-playbook
+  # automatically sets this option to Ansible default value
 end
 ```
 
