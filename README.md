@@ -183,7 +183,7 @@ end
 
 While we are at it, Vagrant has hardcoded some SSH args to be added to the ansible playbook shell commands that will override `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=none` shell ssh parameter.
 
-As of 2017 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). So to ensure this is disabled properly, set line 277 to `ControlMaster=none` and disable the following line.
+As of 2017 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). So to ensure this is disabled properly, set line 277 to `ControlMaster=auto` and disable the following line.
 
 `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/host.rb`
 ```rb
