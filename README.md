@@ -28,30 +28,6 @@ home=c:\cygwin64
 ##### Install Cygwin Packages
 
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
-* binutils
-* openssl
-* openssl-devel
-* gcc-core
-* make
-* python
-* python-setuptools
-* libtool
-* libuuid-devel
-* libffi-dev
-* libcrypt-devel
-* gmp
-* gmp-devel
-* libgmp-devel
-* libmysqlclient-devel (optional)
-* python-devel
-* python-cffi
-* python-crypto
-* openssh
-* curl (optional)
-* wget (optional)
-* nano (optional)
-
-Simply run the cygwin installer as followed:
 
 ```sh
 setup-x86_64.exe --no-admin -q -P binutils,^
@@ -62,7 +38,7 @@ setup-x86_64.exe --no-admin -q -P binutils,^
                                   python-devel,^
                                   libtool,^
                                   libuuid-devel,^
-                                  libffi-dev,^
+                                  libffi-devel,^
                                   python-cffi,^
                                   libcrypt-devel,^
                                   python-crypto,^
@@ -73,10 +49,36 @@ setup-x86_64.exe --no-admin -q -P binutils,^
                                   gmp-devel,^
                                   libgmp-devel,^
                                   openssh,^
-                                  openssh-devel,^
                                   curl,^
                                   wget,^
                                   nano
+```
+
+or using `apt-cyg`
+
+```sh
+$ apt-cyg install binutils \
+          gcc-core \
+          make \
+          python \
+          python-setuptools \
+          python-devel \
+          libtool \
+          libuuid-devel \
+          libffi-devel \
+          python-cffi \
+          libcrypt-devel \
+          python-crypto \
+          openssl \
+          openssl-devel \
+          python-openssl \
+          gmp \
+          gmp-devel \
+          libgmp-devel \
+          openssh \
+          curl \
+          wget \
+          nano
 ```
 
 Now you should have a basic cygwin python environment that can be used to install ansible in.
