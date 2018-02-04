@@ -4,9 +4,7 @@ This is a simple executable wrapper to allow Vagrant to run ansible commands on 
 
 We assume you have installed a working cygwin shell on your workstation.
 
-### Installation
-
-##### Cygwin Configuration
+## Wrapper Configuration
 
 The wrapper must be able to find the installed cygwin environment. By default it assumes the cygwin home is `c:\cygwin`. If your cygwin is installed in a different location there are 2 options available to tell the wrapper where to find the cygwin environment.
 
@@ -24,8 +22,11 @@ The wrapper will look into the directory of the wrapper executable for a `cygwin
 [cygwin]
 home=c:\cygwin64
 ```
+## Installing Ansible on Cygwin
 
-##### Install Cygwin Packages
+This section describes the installation steps required to install Cygwin and Ansible on Windows.
+
+### Install Cygwin
 
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
 
@@ -45,10 +46,9 @@ setup-x86_64.exe -q -P binutils,^
                        openssl,^
                        openssl-devel,^
                        python-openssl,^
-                       gmp,^
-                       gmp-devel,^
-                       libgmp-devel,^
                        openssh,^
+                       gmp,^
+                       libgmp-devel,^
                        curl,^
                        wget,^
                        nano
@@ -72,10 +72,9 @@ $ apt-cyg install binutils \
           openssl \
           openssl-devel \
           python-openssl \
-          gmp \
-          gmp-devel \
-          libgmp-devel \
           openssh \
+          gmp \
+          libgmp-devel \
           curl \
           wget \
           nano
@@ -83,7 +82,7 @@ $ apt-cyg install binutils \
 
 Now you should have a basic cygwin python environment that can be used to install ansible in.
 
-##### Configure Python Environment
+### Configure Python Environment
 
 First lets open up a cygwin terminal and install `pip`
 
@@ -97,7 +96,7 @@ Thereafter we will update `pip`, `setuptools` and also install `wheel` and `virt
 $ pip install -U pip setuptools wheel virtualenv
 ```
 
-##### Install Ansible
+### Install Ansible
 
 Before installing Ansible, you will need to install its dependency `PyNaCL` with additional compiler flags.
 
@@ -117,9 +116,10 @@ Quick test to ensure it works.
 
 ```sh
 $ ansible --version
-ansible 2.0.2.0
-  config file =
-  configured module search path = Default w/o overrides
+ansible 2.4.3.0
+  ansible python module location = /usr/lib/python2.7/site-packages/ansible
+  executable location = /usr/bin/ansible
+  python version = 2.7.14 (default, Oct 31 2017, 21:12:13) [GCC 6.4.0]
 ```
 
 ### Configure Vagrant Environment to work with Ansible
@@ -132,12 +132,16 @@ Simply copy the `ansible-win-wrapper.exe` into the same folder of the `vagrant.e
 copy ansible-win-wrapper C:\HashiCorp\Vagrant\bin\ansible-playbook.exe
 
 c:\> vagrant --version
-Vagrant 1.8.1
+Vagrant 2.0.1
 
 c:\> ansible-playbook --version
-ansible-playbook 2.0.1.0
-  config file =
-  configured module search path = Default w/o overrides
+ansible-playbook 2.4.3.0
+  config file = None
+  configured module search path = [u'/cygdrive/c/Users/fred/.ansible/plugins/modules', u'/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python2.7/site-packages/ansible
+  executable location = /usr/bin/ansible-playbook
+  python version = 2.7.14 (default, Oct 31 2017, 21:12:13) [GCC 6.4.0]
+
 ```
 
 Et voilà, ansible-playbook should now work from vagrant.
@@ -150,6 +154,22 @@ Below an example of how to install 2 of the most commonly used plugins.
 c:\> vagrant plugin install vagrant-vbguest
 
 c:\> vagrant plugin install vagrant-hostmanager
+```
+
+### Fix Vagrant SSH Bug
+
+Some SSH arguments used by ansible playbook shell commands are hardcoded in Vagrant and cannot be overridden by `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=auto` shell ssh parameter.
+
+As of 2018 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). To ensure ControlMaster is disabled, set line 314 to `ControlMaster=none` in `$VAGRANT_HOME/embedded/gems/gems/vagrant-2.0.1/plugins/provisioners/ansible/provisioner/host.rb`.
+
+```rb
+# which are lost when ANSIBLE_SSH_ARGS is defined.
+unless ssh_options.empty?
+  ssh_options << "-o ControlMaster=none"
+  # DISABLE ssh_options << "-o ControlPersist=60s"
+  # Intentionally keep ControlPath undefined to let ansible-playbook
+  # automatically sets this option to Ansible default value
+end
 ```
 
 ### Test Example
@@ -320,20 +340,5 @@ def extra_vars_argument
     # Expected to be a Hash after config validation.
     config.extra_vars.to_json.gsub('{', '{ ').gsub('}', ' }').gsub('"', '\\\"') # << the hacked line fixes space of the curlies and escapes the double quotes
   end
-end
-```
-
-While we are at it, Vagrant has hardcoded some SSH args to be added to the ansible playbook shell commands that will override `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=auto` shell ssh parameter.
-
-As of 2017 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). So to ensure this is disabled properly, set line 277 to `ControlMaster=none` and disable the following line.
-
-`$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/host.rb`
-```rb
-# which are lost when ANSIBLE_SSH_ARGS is defined.
-unless ssh_options.empty?
-  ssh_options << "-o ControlMaster=none"
-  # DISABLE ssh_options << "-o ControlPersist=60s"
-  # Intentionally keep ControlPath undefined to let ansible-playbook
-  # automatically sets this option to Ansible default value
 end
 ```
