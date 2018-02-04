@@ -30,28 +30,28 @@ home=c:\cygwin64
 Use the cygwin package installer from https://cygwin.com/ and install the following packages:
 
 ```sh
-setup-x86_64.exe --no-admin -q -P binutils,^
-                                  gcc-core,^
-                                  make,^
-                                  python,^
-                                  python-setuptools,^
-                                  python-devel,^
-                                  libtool,^
-                                  libuuid-devel,^
-                                  libffi-devel,^
-                                  python-cffi,^
-                                  libcrypt-devel,^
-                                  python-crypto,^
-                                  openssl,^
-                                  openssl-devel,^
-                                  python-openssl,^
-                                  gmp,^
-                                  gmp-devel,^
-                                  libgmp-devel,^
-                                  openssh,^
-                                  curl,^
-                                  wget,^
-                                  nano
+setup-x86_64.exe -q -P binutils,^
+                       gcc-core,^
+                       make,^
+                       python,^
+                       python-setuptools,^
+                       python-devel,^
+                       libtool,^
+                       libuuid-devel,^
+                       libffi-devel,^
+                       python-cffi,^
+                       libcrypt-devel,^
+                       python-crypto,^
+                       openssl,^
+                       openssl-devel,^
+                       python-openssl,^
+                       gmp,^
+                       gmp-devel,^
+                       libgmp-devel,^
+                       openssh,^
+                       curl,^
+                       wget,^
+                       nano
 ```
 
 or using `apt-cyg`
@@ -91,38 +91,26 @@ First lets open up a cygwin terminal and install `pip`
 $ easy_install-2.7 pip
 ```
 
-Thereafter we will update `pip` and `setuptools`
+Thereafter we will update `pip`, `setuptools` and also install `wheel` and `virtualenv`.
 
 ```sh
-$ pip install -U pip setuptools
+$ pip install -U pip setuptools wheel virtualenv
 ```
+
 ##### Install Ansible
 
-Installing pycrypto is a bit of a drag as Ansible needs 2.6.1 and cygwin only comes with a precompiled 2.6 package. One can either install pycrypto via pip using below compiler flag:
+Before installing Ansible, you will need to install its dependency `PyNaCL` with additional compiler flags.
 
 ```sh
-CFLAGS="-g -O2 -D_BSD_SOURCE" pip install -U pycrypto
+ARCHFLAGS="-arch x86_64" \
+LDFLAGS="-L/usr/lib" \
+CFLAGS="-I/usr/include/openssl -g -O2 -D_BSD_SOURCE" pip install -v -v -v -U pynacl
 ```
 
-or just compile it from sources:
+Now lets install ansible and its dependencies.
 
 ```sh
-mkdir -p ~/workspaces/python && cd ~/workspaces/python
-# download and unpack pycrypto 2.6.1 sources
-curl https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.tar.gz | tar xzvf -
-
-# compile disabling BSD source
-cd pycrypto-2.6.1
-CFLAGS="-g -O2 -D_BSD_SOURCE" python setup.py build build_ext -DMS_WIN64
-
-# install module
-python setup.py install
-```
-
-Still in the cygwin terminal lets install ansible and its dependencies.
-
-```sh
-$ pip install -U crypto paramiko PyYAML Jinja2 httplib2 six ansible
+$ pip install -U ansible
 ```
 
 Quick test to ensure it works.
@@ -158,66 +146,10 @@ Make sure that when you install vagrant plugins to use the command line shell el
 
 Below an example of how to install 2 of the most commonly used plugins.
 
-```cmd
+```batch
 c:\> vagrant plugin install vagrant-vbguest
 
 c:\> vagrant plugin install vagrant-hostmanager
-```
-
-#### Fix Vagrant Ansible Provisioner Bug
-
-This one is not to be missed, Vagrant does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
-
-Basically when providing any additional playbook parameters as a hash in Vagrant using the `extra_args` configuration option, this data is not sent in the right format to the ansible playbook.
-
-```rb
-ansible.extra_vars = {
-  my_special_param: Array.new(2){ |n| "#{(1 + n).to_s.rjust(2,'0')}" }
-}
-```
-
-Expected:
-
-`--extra-vars='{ \"my_special_param\":[\"01\",\"02\"] }'`
-
-Actual:
-
-`--extra-vars={my_special_param:[01,02]}`
-
-This problem is caused by the way the JSON is generated for a ruby hash.
-
-The first problem is that the generated json does not escape the double quotes which will get lost in the Subprocess call out.
-
-The other problem is that `ansible-playbook` is very picky in the way it receives and parses the json in the `--extra-vars` argument. In particular it expects a space after the opening bracket `{` and a space before the closig bracket `}`.
-
-
-What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
-
-```rb
-def extra_vars_argument
-  if has_an_extra_vars_file_argument
-    # A JSON or YAML file is referenced.
-    config.extra_vars
-  else
-    # Expected to be a Hash after config validation.
-    config.extra_vars.to_json.gsub('{', '{ ').gsub('}', ' }').gsub('"', '\\\"') # << the hacked line fixes space of the curlies and escapes the double quotes
-  end
-end
-```
-
-While we are at it, Vagrant has hardcoded some SSH args to be added to the ansible playbook shell commands that will override `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=auto` shell ssh parameter.
-
-As of 2017 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). So to ensure this is disabled properly, set line 277 to `ControlMaster=none` and disable the following line.
-
-`$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/host.rb`
-```rb
-# which are lost when ANSIBLE_SSH_ARGS is defined.
-unless ssh_options.empty?
-  ssh_options << "-o ControlMaster=none"
-  # DISABLE ssh_options << "-o ControlPersist=60s"
-  # Intentionally keep ControlPath undefined to let ansible-playbook
-  # automatically sets this option to Ansible default value
-end
 ```
 
 ### Test Example
@@ -321,4 +253,87 @@ ok: [default] => {
 
 PLAY RECAP *********************************************************************
 default                    : ok=2    changed=0    unreachable=0    failed=0
+```
+
+### Random Historic Notes
+
+#### Installing Crypto Dependencies
+
+There also used to be a problem installing Ansible's dependency `pycrypto`. If you have an up-to-date version of Cygwin and its packages installed, you are fine. However if there are problems with `pycrypto`, here 2 options to install it on Cygwin.
+
+Install pycrypto via pip using below compiler flag:
+
+```sh
+CFLAGS="-g -O2 -D_BSD_SOURCE" pip install -U pycrypto
+```
+
+or just compile it from sources:
+
+```sh
+mkdir -p ~/workspaces/python && cd ~/workspaces/python
+# download and unpack pycrypto 2.6.1 sources
+curl https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.tar.gz | tar xzvf -
+
+# compile disabling BSD source
+cd pycrypto-2.6.1
+CFLAGS="-g -O2 -D_BSD_SOURCE" python setup.py build build_ext -DMS_WIN64
+
+# install module
+python setup.py install
+```
+
+#### Vagrant Ansible Provisioner Bug Fix (version 1.8.x only)
+
+This one is not to be missed, Vagrant does not send extra args in json format properly to ansible on Windows. Some discussion documented [here](https://github.com/mitchellh/vagrant/issues/6726).
+
+Basically when providing any additional playbook parameters as a hash in Vagrant using the `extra_args` configuration option, this data is not sent in the right format to the ansible playbook.
+
+```rb
+ansible.extra_vars = {
+  my_special_param: Array.new(2){ |n| "#{(1 + n).to_s.rjust(2,'0')}" }
+}
+```
+
+Expected:
+
+`--extra-vars='{ \"my_special_param\":[\"01\",\"02\"] }'`
+
+Actual:
+
+`--extra-vars={my_special_param:[01,02]}`
+
+This problem is caused by the way the JSON is generated for a ruby hash.
+
+The first problem is that the generated json does not escape the double quotes which will get lost in the Subprocess call out.
+
+The other problem is that `ansible-playbook` is very picky in the way it receives and parses the json in the `--extra-vars` argument. In particular it expects a space after the opening bracket `{` and a space before the closig bracket `}`.
+
+
+What did the trick for me was to apply this hack to the following vagrant file `$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/base.rb`, obviously this will void your warranty but it works.
+
+```rb
+def extra_vars_argument
+  if has_an_extra_vars_file_argument
+    # A JSON or YAML file is referenced.
+    config.extra_vars
+  else
+    # Expected to be a Hash after config validation.
+    config.extra_vars.to_json.gsub('{', '{ ').gsub('}', ' }').gsub('"', '\\\"') # << the hacked line fixes space of the curlies and escapes the double quotes
+  end
+end
+```
+
+While we are at it, Vagrant has hardcoded some SSH args to be added to the ansible playbook shell commands that will override `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=auto` shell ssh parameter.
+
+As of 2017 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). So to ensure this is disabled properly, set line 277 to `ControlMaster=none` and disable the following line.
+
+`$VAGRANT_HOME/embedded/gems/gems/vagrant-1.8.7/plugins/provisioners/ansible/provisioner/host.rb`
+```rb
+# which are lost when ANSIBLE_SSH_ARGS is defined.
+unless ssh_options.empty?
+  ssh_options << "-o ControlMaster=none"
+  # DISABLE ssh_options << "-o ControlPersist=60s"
+  # Intentionally keep ControlPath undefined to let ansible-playbook
+  # automatically sets this option to Ansible default value
+end
 ```
