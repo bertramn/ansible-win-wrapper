@@ -160,12 +160,12 @@ c:\> vagrant plugin install vagrant-hostmanager
 
 Some SSH arguments used by ansible playbook shell commands are hardcoded in Vagrant and cannot be overridden by `ansible.cfg` settings. In particular it will override the `control_path = none` setting in `ansible.cfg` with a hardcoded `-o ControlMaster=auto` shell ssh parameter.
 
-As of 2018 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). To ensure ControlMaster is disabled, set line 314 to `ControlMaster=none` in `$VAGRANT_HOME/embedded/gems/gems/vagrant-2.0.1/plugins/provisioners/ansible/provisioner/host.rb`.
+As of 2018 setting up persistent ssh transactions is [not possible on Windows](http://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible). To disable ControlMaster, either comment out line 314 in `$VAGRANT_HOME/embedded/gems/gems/vagrant-2.0.1/plugins/provisioners/ansible/provisioner/host.rb` or change it to `ControlMaster=none` or to `ControlMaster=no` for OpenSSH SSH v7.+ executables.
 
 ```rb
 # which are lost when ANSIBLE_SSH_ARGS is defined.
 unless ssh_options.empty?
-  ssh_options << "-o ControlMaster=none"
+  ssh_options << "-o ControlMaster=no"
   # DISABLE ssh_options << "-o ControlPersist=60s"
   # Intentionally keep ControlPath undefined to let ansible-playbook
   # automatically sets this option to Ansible default value
@@ -210,11 +210,23 @@ Ansible default configuration with some Windows specific config.
 
 ```properties
 [defaults]
+# default inventory file
+inventory = ./inventory
+
+# disable retry
+retry_files_enabled = False
+
+# disable host checking
 host_key_ckecking = False
+record_host_keys = False
+
 [ssh_connection]
+# below does not seem to work anymore so adding ssh args as is
+ssh_args = -o ControlMaster=no -o UserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -o IdentitiesOnly=yes
+
 # ControlMaster on cygwin OpenSSH does not work, must disable it
 # otherwise ansible will not be able to connect to the target host
-control_path = none
+# control_path = none
 ```
 
 **`inventory`**
@@ -222,8 +234,9 @@ control_path = none
 Need to create an ansible inventory definition, the default Vagrant generated one does not work, vagrants ansible provisioner generates a inventory path arg that is Windows but must POSIX for ansible to work properly, so we just cheat a little.
 
 ```properties
-default ansible_ssh_host=127.0.0.1 ansible_ssh_port=2222 ansible_ssh_user='vagrant' ansible_ssh_private_key_file='./.vagrant/machines/default/virtualbox/private_key'
+default ansible_ssh_host=127.0.0.1 ansible_ssh_port=2222 ansible_ssh_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/default/virtualbox/private_key
 ```
+
 Note: You may need to adjust the `ansible_ssh_port` to whatever the Vagrant machine bound to. You can get around all this by using a DNS plugin like `vagrant-hostmanager` and then just define actual DNS resolvable vagrant machine names in the inventory.
 
 Also may need to `$ chmod 0644 inventory` depending on how your cygwin fstab is setup, ansible may complain about +x permissions.
@@ -234,7 +247,10 @@ Also may need to `$ chmod 0644 inventory` depending on how your cygwin fstab is 
 ---
 - hosts: all
   tasks:
-  - debug: "msg='Hello Ansible from Vagrant'"
+  - name: Greetings
+    debug: msg="Hello Ansible from Vagrant {{ ansible_system }} {{ ansible_distribution }}"
+  - name: Whats under the Hood
+    command: uname -a
 ```
 
 Lets run it:
@@ -261,18 +277,21 @@ Windows is not officially supported for the Ansible Control Machine.
 Please check https://docs.ansible.com/intro_installation.html#control-machine-requirements
     default: Running ansible-playbook...
 
-PLAY ***************************************************************************
+PLAY [all] *******************************************************************************************************************************************************************************************************
 
-TASK [setup] *******************************************************************
+TASK [Gathering Facts] *******************************************************************************************************************************************************************************************
 ok: [default]
 
-TASK [debug] *******************************************************************
+TASK [Greetings] *************************************************************************************************************************************************************************************************
 ok: [default] => {
-    "msg": "Hello Ansible from Vagrant"
+    "msg": "Hello Ansible from Vagrant Linux Mandriva"
 }
 
-PLAY RECAP *********************************************************************
-default                    : ok=2    changed=0    unreachable=0    failed=0
+TASK [Whats under the Hood] **************************************************************************************************************************************************************************************
+changed: [default] => {"changed": true, "cmd": ["uname", "-a"], "delta": "0:00:00.001658", "end": "2018-02-04 04:06:48.369022", "rc": 0, "start": "2018-02-04 04:06:48.367364", "stderr": "", "stderr_lines": [], "stdout": "Linux precise64 3.2.0-23-generic #36-Ubuntu SMP Tue Apr 10 20:39:51 UTC 2012 x86_64 x86_64 x86_64 GNU/Linux", "stdout_lines": ["Linux precise64 3.2.0-23-generic #36-Ubuntu SMP Tue Apr 10 20:39:51 UTC 2012 x86_64 x86_64 x86_64 GNU/Linux"]}
+
+PLAY RECAP *******************************************************************************************************************************************************************************************************
+default                    : ok=3    changed=1    unreachable=0    failed=0
 ```
 
 ### Random Historic Notes
